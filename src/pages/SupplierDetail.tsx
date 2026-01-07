@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, Globe, Star, Package } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Globe, Star, Package, Search } from 'lucide-react';
 import { getSupplierById } from '@/data/suppliers';
-import { sampleProducts } from '@/data/products';
+import { getProductsBySupplierId } from '@/data/products';
 import { useSavedProducts, useSavedSuppliers } from '@/hooks/useLocalStorage';
+import { searchWithinSupplier } from '@/lib/searchEngine';
 import ScoreBadge from '@/components/ScoreBadge';
 import ShipsBadge from '@/components/ShipsBadge';
 import ProductCard from '@/components/ProductCard';
@@ -13,7 +14,7 @@ const SupplierDetail = () => {
   const { id } = useParams<{ id: string }>();
   const supplier = id ? getSupplierById(id) : undefined;
   const [savedSuppliers, setSavedSuppliers] = useSavedSuppliers();
-  const [savedProducts] = useSavedProducts();
+  const [searchQuery, setSearchQuery] = useState('');
 
   const isSaved = savedSuppliers.some(s => s.supplierId === id);
 
@@ -27,16 +28,12 @@ const SupplierDetail = () => {
     }
   };
 
-  // Get products from this supplier (sample + saved)
+  // Get ALL products from this supplier (full inventory)
+  // When search query is empty, show all. When typing, filter.
   const supplierProducts = useMemo(() => {
-    const sampleFromSupplier = sampleProducts.filter(p => p.supplierId === id);
-    return sampleFromSupplier;
-  }, [id]);
-
-  // Get saved products from this supplier
-  const savedFromSupplier = useMemo(() => {
-    return savedProducts.filter(p => p.supplierId === id);
-  }, [id, savedProducts]);
+    if (!id) return [];
+    return searchWithinSupplier(id, searchQuery);
+  }, [id, searchQuery]);
 
   if (!supplier) {
     return (
@@ -65,10 +62,18 @@ const SupplierDetail = () => {
     'low-medium': 'Low-medium margins'
   };
 
-  const crowdLabel = {
-    quiet: 'Low competition',
-    moderate: 'Moderate competition',
-    saturated: 'High competition'
+  const exclusivityLabel = {
+    exclusive: 'Exclusive',
+    semi: 'Semi-Exclusive',
+    utility: 'Utility',
+    reps: 'Reps'
+  };
+
+  const exclusivityColor = {
+    exclusive: 'text-badge-success-foreground bg-badge-success/20',
+    semi: 'text-badge-info-foreground bg-badge-info/20',
+    utility: 'text-muted-foreground bg-muted',
+    reps: 'text-badge-warning-foreground bg-badge-warning/20'
   };
 
   return (
@@ -89,8 +94,14 @@ const SupplierDetail = () => {
             <div className="flex-1">
               {/* Badges */}
               <div className="flex items-center gap-2 mb-3">
-                <ScoreBadge score={supplier.score} size="lg" />
+                <ScoreBadge score={supplier.leverageScore} size="lg" />
                 <ShipsBadge shipsSingles={supplier.shipsSingles} />
+                <span className={cn(
+                  'px-2 py-0.5 rounded text-xs font-medium',
+                  exclusivityColor[supplier.exclusivityTier]
+                )}>
+                  {exclusivityLabel[supplier.exclusivityTier]}
+                </span>
               </div>
 
               {/* Name */}
@@ -114,7 +125,7 @@ const SupplierDetail = () => {
                 </span>
                 <span className="text-muted-foreground">•</span>
                 <span className="text-foreground">
-                  {crowdLabel[supplier.crowdedness]}
+                  Leverage Score: {supplier.leverageScore}
                 </span>
               </div>
             </div>
@@ -180,47 +191,45 @@ const SupplierDetail = () => {
 
       {/* Content */}
       <div className="container mx-auto px-4 py-8">
-        {/* Saved Products from this Supplier */}
-        {savedFromSupplier.length > 0 && (
-          <div className="mb-10">
-            <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-              <Star className="w-5 h-5 text-primary fill-primary" />
-              Your Saved Items ({savedFromSupplier.length})
-            </h2>
-            <div className="product-grid">
-              {savedFromSupplier.map(saved => {
-                const product = sampleProducts.find(p => p.id === saved.productId);
-                if (!product) return null;
-                return <ProductCard key={product.id} product={product} />;
-              })}
-            </div>
+        {/* Scoped Search */}
+        <div className="mb-6">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search within this supplier..."
+              className="w-full pl-10 pr-4 py-2 bg-secondary border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            />
           </div>
-        )}
+        </div>
 
-        {/* Available Products */}
-        {supplierProducts.length > 0 && (
-          <div>
-            <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
-              <Package className="w-5 h-5 text-primary" />
-              Available Products ({supplierProducts.length})
-            </h2>
+        {/* Full Inventory */}
+        <div>
+          <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Package className="w-5 h-5 text-primary" />
+            {searchQuery ? `Results for "${searchQuery}"` : 'Full Inventory'} ({supplierProducts.length})
+          </h2>
+          
+          {supplierProducts.length > 0 ? (
             <div className="product-grid">
               {supplierProducts.map(product => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
-          </div>
-        )}
-
-        {supplierProducts.length === 0 && savedFromSupplier.length === 0 && (
-          <div className="text-center py-16">
-            <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">No products yet</h3>
-            <p className="text-muted-foreground text-sm">
-              Products from this supplier will appear here
-            </p>
-          </div>
-        )}
+          ) : (
+            <div className="text-center py-16">
+              <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">
+                {searchQuery ? 'No products match your search' : 'No products yet'}
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                {searchQuery ? 'Try a different search term' : 'Products from this supplier will appear here'}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

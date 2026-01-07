@@ -32,10 +32,18 @@ const SupplierCard = ({ supplier }: SupplierCardProps) => {
     WW: '🌍 Worldwide'
   };
 
-  const crowdLabel = {
-    quiet: 'Quiet',
-    moderate: 'Moderate',
-    saturated: 'Saturated'
+  const exclusivityLabel = {
+    exclusive: 'Exclusive',
+    semi: 'Semi-Exclusive',
+    utility: 'Utility',
+    reps: 'Reps'
+  };
+
+  const exclusivityColor = {
+    exclusive: 'text-badge-success-foreground bg-badge-success/20',
+    semi: 'text-badge-info-foreground bg-badge-info/20',
+    utility: 'text-muted-foreground bg-muted',
+    reps: 'text-badge-warning-foreground bg-badge-warning/20'
   };
 
   return (
@@ -47,12 +55,22 @@ const SupplierCard = ({ supplier }: SupplierCardProps) => {
         <div className="flex-1 min-w-0">
           {/* Header */}
           <div className="flex items-center gap-2 mb-1">
-            <ScoreBadge score={supplier.score} />
+            <ScoreBadge score={supplier.leverageScore} />
             <ShipsBadge shipsSingles={supplier.shipsSingles} />
           </div>
 
+          {/* Exclusivity Tier */}
+          <div className="mt-2 mb-1">
+            <span className={cn(
+              'inline-block px-2 py-0.5 rounded text-xs font-medium',
+              exclusivityColor[supplier.exclusivityTier]
+            )}>
+              {exclusivityLabel[supplier.exclusivityTier]}
+            </span>
+          </div>
+
           {/* Name */}
-          <h3 className="font-semibold text-card-foreground mt-2 truncate">
+          <h3 className="font-semibold text-card-foreground truncate">
             {supplier.name}
           </h3>
 
@@ -65,9 +83,7 @@ const SupplierCard = ({ supplier }: SupplierCardProps) => {
           <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-muted-foreground">
             <span>{regionLabel[supplier.region]}</span>
             <span className="w-1 h-1 rounded-full bg-border" />
-            <span>{crowdLabel[supplier.crowdedness]} competition</span>
-            <span className="w-1 h-1 rounded-full bg-border" />
-            <span className="capitalize">{supplier.margin} margin</span>
+            <span>Score: {supplier.leverageScore}</span>
           </div>
 
           {/* Brands */}

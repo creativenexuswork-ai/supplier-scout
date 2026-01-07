@@ -1,5 +1,5 @@
-import { suppliers, Supplier, Category, Region, ShipsSingles } from '@/data/suppliers';
-import { sampleProducts, Product, ItemType, ProductCategory } from '@/data/products';
+import { suppliers, Supplier, Category, Region, SupplierCategory, ExclusivityTier } from '@/data/suppliers';
+import { sampleProducts, Product, ItemType, ProductCategory, isValidProduct } from '@/data/products';
 
 interface ParsedQuery {
   itemType?: ItemType;
@@ -107,16 +107,83 @@ function itemTypeToCategory(itemType: ItemType): ProductCategory {
 }
 
 export interface SearchFilters {
-  shipsSingles?: ShipsSingles;
+  shipsSingles?: boolean;
   minScore?: number;
   region?: Region;
   supplierId?: string;
+  includeUtility?: boolean;
 }
+
+// Calculate text relevance score (0-1)
+function calculateTextRelevance(product: Product, query: string): number {
+  if (!query) return 0.5;
+  
+  const normalized = query.toLowerCase();
+  const fields = [
+    product.name.toLowerCase(),
+    product.brand.toLowerCase(),
+    product.category.toLowerCase()
+  ];
+  
+  let score = 0;
+  for (const field of fields) {
+    if (field.includes(normalized)) {
+      score += 0.5;
+    }
+    // Partial word matching
+    const words = normalized.split(/\s+/);
+    for (const word of words) {
+      if (field.includes(word)) {
+        score += 0.2;
+      }
+    }
+  }
+  
+  return Math.min(1, score);
+}
+
+// Calculate supplier text relevance
+function calculateSupplierTextRelevance(supplier: Supplier, query: string): number {
+  if (!query) return 0.5;
+  
+  const normalized = query.toLowerCase();
+  let score = 0;
+  
+  if (supplier.name.toLowerCase().includes(normalized)) score += 0.5;
+  if (supplier.bestFor.toLowerCase().includes(normalized)) score += 0.3;
+  
+  for (const brand of supplier.brands) {
+    if (brand.toLowerCase().includes(normalized)) {
+      score += 0.3;
+      break;
+    }
+  }
+  
+  return Math.min(1, score);
+}
+
+// Exclusivity tier weights for ranking
+const exclusivityWeight: Record<ExclusivityTier, number> = {
+  exclusive: 1.0,
+  semi: 0.7,
+  utility: 0.3,
+  reps: 0.0
+};
 
 export function searchProducts(query: string, filters?: SearchFilters): Product[] {
   const parsed = parseQuery(query);
   
-  let results = [...sampleProducts];
+  // Only return valid products
+  let results = sampleProducts.filter(isValidProduct);
+
+  // Filter out utility and reps suppliers unless explicitly included
+  results = results.filter(p => {
+    const supplier = suppliers.find(s => s.id === p.supplierId);
+    if (!supplier) return false;
+    if (supplier.supplierCategory === 'reps') return false;
+    if (supplier.supplierCategory === 'utility' && !filters?.includeUtility) return false;
+    return true;
+  });
 
   // Filter by category/itemType
   if (parsed.category) {
@@ -139,7 +206,7 @@ export function searchProducts(query: string, filters?: SearchFilters): Product[
       results = results.filter(p => p.supplierId === filters.supplierId);
     }
 
-    if (filters.region || filters.shipsSingles || filters.minScore) {
+    if (filters.region || filters.shipsSingles !== undefined || filters.minScore) {
       results = results.filter(p => {
         const supplier = suppliers.find(s => s.id === p.supplierId);
         if (!supplier) return false;
@@ -147,10 +214,10 @@ export function searchProducts(query: string, filters?: SearchFilters): Product[
         if (filters.region && supplier.region !== filters.region && supplier.region !== 'WW') {
           return false;
         }
-        if (filters.shipsSingles && supplier.shipsSingles !== filters.shipsSingles) {
+        if (filters.shipsSingles !== undefined && supplier.shipsSingles !== filters.shipsSingles) {
           return false;
         }
-        if (filters.minScore && supplier.score < filters.minScore) {
+        if (filters.minScore && supplier.leverageScore < filters.minScore) {
           return false;
         }
         return true;
@@ -158,20 +225,27 @@ export function searchProducts(query: string, filters?: SearchFilters): Product[
     }
   }
 
-  // Sort by supplier score and other factors
+  // Rank results: exclusivityTier 40%, leverageScore 30%, text relevance 30%
   results.sort((a, b) => {
     const supplierA = suppliers.find(s => s.id === a.supplierId);
     const supplierB = suppliers.find(s => s.id === b.supplierId);
     
     if (!supplierA || !supplierB) return 0;
 
-    // Ships singles priority
-    const singlesOrder = { yes: 0, mixed: 1, no: 2 };
-    const singlesCompare = singlesOrder[supplierA.shipsSingles] - singlesOrder[supplierB.shipsSingles];
-    if (singlesCompare !== 0) return singlesCompare;
-
-    // Score
-    return supplierB.score - supplierA.score;
+    // Calculate composite score
+    const exclusivityA = exclusivityWeight[supplierA.exclusivityTier] * 0.4;
+    const exclusivityB = exclusivityWeight[supplierB.exclusivityTier] * 0.4;
+    
+    const leverageA = (supplierA.leverageScore / 10) * 0.3;
+    const leverageB = (supplierB.leverageScore / 10) * 0.3;
+    
+    const relevanceA = calculateTextRelevance(a, query) * 0.3;
+    const relevanceB = calculateTextRelevance(b, query) * 0.3;
+    
+    const scoreA = exclusivityA + leverageA + relevanceA;
+    const scoreB = exclusivityB + leverageB + relevanceB;
+    
+    return scoreB - scoreA;
   });
 
   return results;
@@ -180,7 +254,12 @@ export function searchProducts(query: string, filters?: SearchFilters): Product[
 export function searchSuppliers(query: string, filters?: SearchFilters): Supplier[] {
   const parsed = parseQuery(query);
   
-  let results = [...suppliers];
+  // Filter out reps and optionally utility
+  let results = suppliers.filter(s => {
+    if (s.supplierCategory === 'reps') return false;
+    if (s.supplierCategory === 'utility' && !filters?.includeUtility) return false;
+    return true;
+  });
 
   // Filter by category
   if (parsed.category) {
@@ -204,48 +283,48 @@ export function searchSuppliers(query: string, filters?: SearchFilters): Supplie
     if (filters.region) {
       results = results.filter(s => s.region === filters.region || s.region === 'WW');
     }
-    if (filters.shipsSingles) {
+    if (filters.shipsSingles !== undefined) {
       results = results.filter(s => s.shipsSingles === filters.shipsSingles);
     }
     if (filters.minScore) {
-      results = results.filter(s => s.score >= filters.minScore);
+      results = results.filter(s => s.leverageScore >= filters.minScore);
     }
   }
 
-  // Sort
+  // Rank: exclusivityTier 40%, leverageScore 30%, text relevance 30%
   results.sort((a, b) => {
-    // Ships singles priority
-    const singlesOrder = { yes: 0, mixed: 1, no: 2 };
-    const singlesCompare = singlesOrder[a.shipsSingles] - singlesOrder[b.shipsSingles];
-    if (singlesCompare !== 0) return singlesCompare;
-
-    // Score
-    if (b.score !== a.score) return b.score - a.score;
-
-    // Crowdedness
-    const crowdOrder = { quiet: 0, moderate: 1, saturated: 2 };
-    return crowdOrder[a.crowdedness] - crowdOrder[b.crowdedness];
+    const exclusivityA = exclusivityWeight[a.exclusivityTier] * 0.4;
+    const exclusivityB = exclusivityWeight[b.exclusivityTier] * 0.4;
+    
+    const leverageA = (a.leverageScore / 10) * 0.3;
+    const leverageB = (b.leverageScore / 10) * 0.3;
+    
+    const relevanceA = calculateSupplierTextRelevance(a, query) * 0.3;
+    const relevanceB = calculateSupplierTextRelevance(b, query) * 0.3;
+    
+    const scoreA = exclusivityA + leverageA + relevanceA;
+    const scoreB = exclusivityB + leverageB + relevanceB;
+    
+    return scoreB - scoreA;
   });
 
   return results;
 }
 
-export function getRelaxedResults(query: string): { products: Product[]; suppliers: Supplier[]; message: string } {
-  // Try progressively relaxing constraints
-  let products = searchProducts(query);
-  let relaxedSuppliers = searchSuppliers(query);
-
-  if (products.length === 0) {
-    // Relax to all products
-    products = sampleProducts;
-    relaxedSuppliers = suppliers;
+// Scoped search within a single supplier
+export function searchWithinSupplier(supplierId: string, query: string): Product[] {
+  if (!query.trim()) {
+    // Return all products for this supplier when no query
+    return sampleProducts.filter(p => p.supplierId === supplierId && isValidProduct(p));
   }
 
-  return {
-    products: products.slice(0, 20),
-    suppliers: relaxedSuppliers.slice(0, 10),
-    message: products.length < sampleProducts.length 
-      ? '' 
-      : 'No exact match — showing all available products.'
-  };
+  const normalized = query.toLowerCase().trim();
+  
+  return sampleProducts
+    .filter(p => p.supplierId === supplierId && isValidProduct(p))
+    .filter(p => 
+      p.name.toLowerCase().includes(normalized) ||
+      p.brand.toLowerCase().includes(normalized) ||
+      p.category.toLowerCase().includes(normalized)
+    );
 }

@@ -3,18 +3,23 @@ export type ShipsSingles = 'yes' | 'mixed' | 'no';
 export type Region = 'UK' | 'EU' | 'WW';
 export type Margin = 'high' | 'medium' | 'low' | 'medium-high' | 'low-medium';
 export type Crowdedness = 'quiet' | 'moderate' | 'saturated';
+export type SupplierCategory = 'core' | 'boutique' | 'utility' | 'reps';
+export type ExclusivityTier = 'exclusive' | 'semi' | 'utility' | 'reps';
 
 export interface Supplier {
   id: string;
   name: string;
   category: Category;
+  supplierCategory: SupplierCategory;
+  exclusivityTier: ExclusivityTier;
   bestFor: string;
   brands: string[];
-  shipsSingles: ShipsSingles;
+  categories: string[]; // product categories supplied
+  shipsSingles: boolean;
   region: Region;
   margin: Margin;
   crowdedness: Crowdedness;
-  score: number;
+  leverageScore: number; // 1-10
   links: {
     site?: string;
     portal?: string;
@@ -22,18 +27,57 @@ export interface Supplier {
 }
 
 export const suppliers: Supplier[] = [
-  // CLOTHING
+  // CORE EXCLUSIVES
+  {
+    id: 'style-centre',
+    name: 'Style Centre',
+    category: 'clothing',
+    supplierCategory: 'core',
+    exclusivityTier: 'exclusive',
+    bestFor: 'UK designer access',
+    brands: ['Tommy Hilfiger', 'Calvin Klein', 'DKNY', 'Michael Kors'],
+    categories: ['clothing', 'bags', 'accessories'],
+    shipsSingles: true,
+    region: 'UK',
+    margin: 'high',
+    crowdedness: 'quiet',
+    leverageScore: 9,
+    links: {
+      site: 'https://www.stylecentre.com'
+    }
+  },
+  {
+    id: 'b2b-griffati',
+    name: 'B2B Griffati',
+    category: 'bags',
+    supplierCategory: 'core',
+    exclusivityTier: 'exclusive',
+    bestFor: 'Premium leather bags',
+    brands: ['Furla', 'Coccinelle', 'Pinko', 'Liu Jo', 'Guess Bags'],
+    categories: ['bags', 'accessories'],
+    shipsSingles: true,
+    region: 'EU',
+    margin: 'high',
+    crowdedness: 'quiet',
+    leverageScore: 9.5,
+    links: {
+      site: 'https://b2b.griffati.it'
+    }
+  },
   {
     id: 'brandsdistribution',
     name: 'BrandsDistribution / BDroppy',
     category: 'clothing',
+    supplierCategory: 'core',
+    exclusivityTier: 'exclusive',
     bestFor: 'Designer dropship',
     brands: ['Guess', 'Calvin Klein', 'Tommy Hilfiger', 'Armani', 'Diesel', 'Michael Kors'],
-    shipsSingles: 'yes',
+    categories: ['clothing', 'bags', 'sneakers'],
+    shipsSingles: true,
     region: 'EU',
     margin: 'medium-high',
     crowdedness: 'moderate',
-    score: 8,
+    leverageScore: 8,
     links: {
       site: 'https://www.brandsdistribution.com',
       portal: 'https://www.bdroppy.com'
@@ -43,106 +87,164 @@ export const suppliers: Supplier[] = [
     id: 'brandsgateway',
     name: 'BrandsGateway',
     category: 'clothing',
+    supplierCategory: 'core',
+    exclusivityTier: 'semi',
     bestFor: 'Wide brand range',
     brands: ['Versace', 'Moschino', 'Hugo Boss', 'Ralph Lauren', 'Lacoste'],
-    shipsSingles: 'yes',
+    categories: ['clothing', 'bags', 'accessories'],
+    shipsSingles: true,
     region: 'WW',
     margin: 'medium',
     crowdedness: 'saturated',
-    score: 7,
+    leverageScore: 7,
     links: {
       site: 'https://www.brandsgateway.com'
+    }
+  },
+
+  // BOUTIQUE / NICHE
+  {
+    id: 'slamjam',
+    name: 'Slam Jam (Trade)',
+    category: 'sneakers',
+    supplierCategory: 'boutique',
+    exclusivityTier: 'semi',
+    bestFor: 'Streetwear curation',
+    brands: ['Stüssy', 'Carhartt WIP', 'Stone Island', 'Off-White', 'AMBUSH'],
+    categories: ['clothing', 'sneakers'],
+    shipsSingles: false,
+    region: 'EU',
+    margin: 'medium',
+    crowdedness: 'moderate',
+    leverageScore: 7.5,
+    links: {
+      site: 'https://www.slamjam.com'
     }
   },
   {
     id: 'matterhorn',
     name: 'Matterhorn Wholesale',
     category: 'clothing',
+    supplierCategory: 'boutique',
+    exclusivityTier: 'semi',
     bestFor: 'Quiet margin plays',
     brands: ['Levi\'s', 'Superdry', 'G-Star Raw', 'Pepe Jeans'],
-    shipsSingles: 'yes',
+    categories: ['clothing'],
+    shipsSingles: true,
     region: 'EU',
     margin: 'medium',
     crowdedness: 'quiet',
-    score: 7.5,
+    leverageScore: 7.5,
     links: {
       site: 'https://b2b.mfrn.pl'
-    }
-  },
-  // SNEAKERS & STREETWEAR
-  {
-    id: 'jd-trade',
-    name: 'JD / Size? / Footlocker Trade',
-    category: 'sneakers',
-    bestFor: 'Hype sneaker access',
-    brands: ['Nike', 'Jordan', 'Adidas', 'New Balance', 'Puma', 'ASICS'],
-    shipsSingles: 'mixed',
-    region: 'UK',
-    margin: 'high',
-    crowdedness: 'quiet',
-    score: 9,
-    links: {
-      site: 'https://www.jdsports.co.uk'
-    }
-  },
-  {
-    id: 'slamjam',
-    name: 'Slam Jam / One Block Down',
-    category: 'sneakers',
-    bestFor: 'Streetwear curation',
-    brands: ['Stüssy', 'Carhartt WIP', 'Stone Island', 'Off-White', 'AMBUSH'],
-    shipsSingles: 'mixed',
-    region: 'EU',
-    margin: 'medium',
-    crowdedness: 'moderate',
-    score: 7.5,
-    links: {
-      site: 'https://www.slamjam.com'
-    }
-  },
-  // BAGS & ACCESSORIES
-  {
-    id: 'b2b-griffati',
-    name: 'B2B Griffati',
-    category: 'bags',
-    bestFor: 'Premium leather bags',
-    brands: ['Furla', 'Coccinelle', 'Pinko', 'Liu Jo', 'Guess Bags'],
-    shipsSingles: 'yes',
-    region: 'EU',
-    margin: 'high',
-    crowdedness: 'quiet',
-    score: 9.5,
-    links: {
-      site: 'https://b2b.griffati.it'
     }
   },
   {
     id: 'luxury-brands-dist',
     name: 'Luxury Brands Distribution',
     category: 'bags',
+    supplierCategory: 'boutique',
+    exclusivityTier: 'exclusive',
     bestFor: 'High-end accessories',
     brands: ['Burberry', 'Prada', 'Gucci', 'YSL', 'Bottega Veneta'],
-    shipsSingles: 'yes',
+    categories: ['bags', 'accessories'],
+    shipsSingles: true,
     region: 'EU',
     margin: 'high',
     crowdedness: 'quiet',
-    score: 9,
+    leverageScore: 9,
     links: {
       site: 'https://luxurybrandsdistribution.com'
     }
   },
-  // GIFTS / ADD-ONS
+  {
+    id: 'stylewise-direct',
+    name: 'Stylewise Direct',
+    category: 'clothing',
+    supplierCategory: 'boutique',
+    exclusivityTier: 'semi',
+    bestFor: 'UK fashion wholesale',
+    brands: ['French Connection', 'Ted Baker', 'Karen Millen', 'Coast'],
+    categories: ['clothing'],
+    shipsSingles: true,
+    region: 'UK',
+    margin: 'medium',
+    crowdedness: 'quiet',
+    leverageScore: 7,
+    links: {
+      site: 'https://www.stylewisedirect.com'
+    }
+  },
+  {
+    id: 'paris-fashion-shops',
+    name: 'Paris Fashion Shops',
+    category: 'clothing',
+    supplierCategory: 'boutique',
+    exclusivityTier: 'semi',
+    bestFor: 'EU aggregator',
+    brands: ['Zadig & Voltaire', 'Sandro', 'Maje', 'Kenzo'],
+    categories: ['clothing', 'bags'],
+    shipsSingles: true,
+    region: 'EU',
+    margin: 'medium',
+    crowdedness: 'moderate',
+    leverageScore: 7,
+    links: {
+      site: 'https://www.parisfashionshops.com'
+    }
+  },
+
+  // UTILITY (HIDDEN BY DEFAULT)
+  {
+    id: 'bigbuy',
+    name: 'BigBuy',
+    category: 'general',
+    supplierCategory: 'utility',
+    exclusivityTier: 'utility',
+    bestFor: 'EU general backup',
+    brands: ['Mixed'],
+    categories: ['general', 'gifts'],
+    shipsSingles: true,
+    region: 'EU',
+    margin: 'low-medium',
+    crowdedness: 'saturated',
+    leverageScore: 5,
+    links: {
+      site: 'https://www.bigbuy.eu'
+    }
+  },
+  {
+    id: 'avasam',
+    name: 'Avasam',
+    category: 'general',
+    supplierCategory: 'utility',
+    exclusivityTier: 'utility',
+    bestFor: 'UK dropship backup',
+    brands: ['Mixed'],
+    categories: ['general'],
+    shipsSingles: true,
+    region: 'UK',
+    margin: 'low-medium',
+    crowdedness: 'saturated',
+    leverageScore: 5,
+    links: {
+      site: 'https://www.avasam.com'
+    }
+  },
   {
     id: 'puckator',
     name: 'Puckator',
     category: 'gifts',
-    bestFor: 'Gift bundles',
+    supplierCategory: 'utility',
+    exclusivityTier: 'utility',
+    bestFor: 'Gift bundles only',
     brands: ['Puckator Originals', 'Licensed Characters'],
-    shipsSingles: 'yes',
+    categories: ['gifts'],
+    shipsSingles: true,
     region: 'UK',
     margin: 'medium',
     crowdedness: 'moderate',
-    score: 7.5,
+    leverageScore: 6,
     links: {
       site: 'https://www.puckator.co.uk'
     }
@@ -151,46 +253,18 @@ export const suppliers: Supplier[] = [
     id: 'ancient-wisdom',
     name: 'Ancient Wisdom',
     category: 'gifts',
+    supplierCategory: 'utility',
+    exclusivityTier: 'utility',
     bestFor: 'Candles & wellness',
     brands: ['Ancient Wisdom', 'Stamford'],
-    shipsSingles: 'yes',
+    categories: ['gifts'],
+    shipsSingles: true,
     region: 'UK',
     margin: 'medium',
     crowdedness: 'quiet',
-    score: 7,
+    leverageScore: 6,
     links: {
       site: 'https://www.ancientwisdom.biz'
-    }
-  },
-  // GENERAL / BACKUP
-  {
-    id: 'avasam',
-    name: 'Avasam',
-    category: 'general',
-    bestFor: 'UK dropship backup',
-    brands: ['Mixed'],
-    shipsSingles: 'yes',
-    region: 'UK',
-    margin: 'low-medium',
-    crowdedness: 'saturated',
-    score: 6,
-    links: {
-      site: 'https://www.avasam.com'
-    }
-  },
-  {
-    id: 'bigbuy',
-    name: 'BigBuy',
-    category: 'general',
-    bestFor: 'EU general backup',
-    brands: ['Mixed'],
-    shipsSingles: 'yes',
-    region: 'EU',
-    margin: 'low-medium',
-    crowdedness: 'saturated',
-    score: 6,
-    links: {
-      site: 'https://www.bigbuy.eu'
     }
   }
 ];
@@ -200,7 +274,17 @@ export const getSupplierById = (id: string): Supplier | undefined => {
 };
 
 export const getSuppliersByCategory = (category: Category): Supplier[] => {
-  return suppliers.filter(s => s.category === category).sort((a, b) => b.score - a.score);
+  return suppliers.filter(s => s.category === category).sort((a, b) => b.leverageScore - a.leverageScore);
+};
+
+export const getSuppliersBySupplierCategory = (supplierCategory: SupplierCategory): Supplier[] => {
+  return suppliers.filter(s => s.supplierCategory === supplierCategory).sort((a, b) => b.leverageScore - a.leverageScore);
+};
+
+export const getVisibleSuppliers = (showUtility: boolean = false): Supplier[] => {
+  return suppliers
+    .filter(s => s.supplierCategory !== 'reps' && (showUtility || s.supplierCategory !== 'utility'))
+    .sort((a, b) => b.leverageScore - a.leverageScore);
 };
 
 export const getAllBrands = (): string[] => {

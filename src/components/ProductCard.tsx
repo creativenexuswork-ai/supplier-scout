@@ -1,6 +1,6 @@
 import { Star, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Product } from '@/data/products';
+import { Product, isValidProduct } from '@/data/products';
 import { getSupplierById } from '@/data/suppliers';
 import ScoreBadge from './ScoreBadge';
 import ShipsBadge from './ShipsBadge';
@@ -26,20 +26,28 @@ const ProductCard = ({ product }: ProductCardProps) => {
     } else if (supplier) {
       const newSaved: SavedProduct = {
         productId: product.id,
-        title: product.title,
+        title: product.name,
         brand: product.brand,
         itemType: product.itemType,
         imageUrl: product.imageUrl,
         supplierId: product.supplierId,
-        supplierScore: supplier.score,
+        supplierScore: supplier.leverageScore,
         category: product.category,
-        savedAt: new Date().toISOString()
+        savedAt: new Date().toISOString(),
+        price: product.price,
+        currency: product.currency
       };
       setSavedProducts(prev => [...prev, newSaved]);
     }
   };
 
-  if (!supplier) return null;
+  // Do not render if product is invalid (missing imageUrl or price)
+  if (!supplier || !isValidProduct(product)) return null;
+
+  const formatPrice = (price: number, currency: string) => {
+    const symbol = currency === 'GBP' ? '£' : '€';
+    return `${symbol}${price.toFixed(2)}`;
+  };
 
   return (
     <div className="group bg-card rounded-lg overflow-hidden border border-border card-hover animate-fade-in">
@@ -47,7 +55,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
       <div className="relative aspect-square overflow-hidden bg-muted">
         <img
           src={product.imageUrl}
-          alt={product.title}
+          alt={product.name}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
         />
@@ -67,7 +75,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
         {/* Score Badge */}
         <div className="absolute top-2 left-2">
-          <ScoreBadge score={supplier.score} size="sm" />
+          <ScoreBadge score={supplier.leverageScore} size="sm" />
         </div>
       </div>
 
@@ -80,8 +88,13 @@ const ProductCard = ({ product }: ProductCardProps) => {
         
         {/* Title */}
         <h3 className="font-medium text-sm text-card-foreground line-clamp-2 leading-tight">
-          {product.title}
+          {product.name}
         </h3>
+
+        {/* Price */}
+        <p className="text-sm font-semibold text-primary">
+          {formatPrice(product.price, product.currency)}
+        </p>
 
         {/* Supplier Info */}
         <div className="flex items-center justify-between pt-1">

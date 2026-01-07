@@ -73,6 +73,12 @@ const Saved = () => {
     }
   };
 
+  const formatPrice = (price?: number, currency?: string) => {
+    if (!price) return null;
+    const symbol = currency === 'GBP' ? '£' : '€';
+    return `${symbol}${price.toFixed(2)}`;
+  };
+
   const renderProductCard = (product: typeof savedProducts[0]) => {
     const supplier = getSupplierById(product.supplierId);
     
@@ -113,6 +119,13 @@ const Saved = () => {
           <h3 className="font-medium text-sm text-card-foreground line-clamp-2 leading-tight">
             {product.title}
           </h3>
+
+          {/* Price */}
+          {product.price && (
+            <p className="text-sm font-semibold text-primary">
+              {formatPrice(product.price, product.currency)}
+            </p>
+          )}
 
           {/* Supplier */}
           <div className="flex items-center gap-2">
@@ -256,14 +269,14 @@ const Saved = () => {
             <Bookmark className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">No saved items yet</h3>
             <p className="text-muted-foreground text-sm mb-4">
-              Start saving products by clicking the star icon
+              Start saving products by clicking the star icon on supplier pages
             </p>
             <Link
-              to="/"
+              to="/suppliers"
               className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
             >
               <Package className="w-4 h-4" />
-              Browse Products
+              Browse Suppliers
             </Link>
           </div>
         ) : filteredProducts.length === 0 ? (
@@ -283,7 +296,7 @@ const Saved = () => {
                     <h2 className="font-semibold text-foreground">
                       {supplier?.name.split('/')[0].trim() || supplierId}
                     </h2>
-                    {supplier && <ScoreBadge score={supplier.score} size="sm" />}
+                    {supplier && <ScoreBadge score={supplier.leverageScore} size="sm" />}
                     <span className="text-sm text-muted-foreground">
                       ({products.length} items)
                     </span>

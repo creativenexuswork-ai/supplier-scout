@@ -36,6 +36,8 @@ export interface SavedProduct {
   category: string;
   savedAt: string;
   note?: string;
+  price?: number;
+  currency?: string;
 }
 
 export interface SavedSupplier {

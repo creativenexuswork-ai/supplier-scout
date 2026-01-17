@@ -28,8 +28,8 @@ const Index = () => {
     return searchProducts(activeQuery, {
       supplierId: filters.supplier,
       region: filters.region,
-      shipsSingles: filters.shipsSingles === 'yes' ? true : filters.shipsSingles === 'no' ? false : undefined,
-      minScore: filters.minScore,
+      shipsSingles: filters.shipsSingles,
+      minScore: filters.minLeverageScore,
       includeUtility: false // Never include utility in global search
     });
   }, [activeQuery, filters]);

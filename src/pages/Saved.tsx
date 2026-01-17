@@ -117,7 +117,7 @@ const Saved = () => {
           </p>
           
           <h3 className="font-medium text-sm text-card-foreground line-clamp-2 leading-tight">
-            {product.title}
+            {product.title || product.productId}
           </h3>
 
           {/* Price */}
@@ -132,7 +132,7 @@ const Saved = () => {
             <span className="text-xs text-muted-foreground truncate">
               {supplier?.name.split('/')[0].trim() || 'Unknown'}
             </span>
-            {supplier && <ShipsBadge shipsSingles={supplier.shipsSingles} showLabel={false} />}
+            {supplier?.shipsSingles && <ShipsBadge shipsSingles={supplier.shipsSingles} showLabel={false} />}
           </div>
 
           {/* Note */}

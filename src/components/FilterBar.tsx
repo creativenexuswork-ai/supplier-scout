@@ -1,5 +1,5 @@
 import { Filter } from 'lucide-react';
-import { suppliers, Region, ShipsSingles } from '@/data/suppliers';
+import { suppliers, Region } from '@/data/suppliers';
 import {
   Select,
   SelectContent,
@@ -11,8 +11,8 @@ import {
 export interface Filters {
   supplier?: string;
   region?: Region;
-  shipsSingles?: ShipsSingles;
-  minScore?: number;
+  shipsSingles?: boolean;
+  minLeverageScore?: number;
 }
 
 interface FilterBarProps {
@@ -64,8 +64,8 @@ const FilterBar = ({ filters, onChange }: FilterBarProps) => {
 
       {/* Ships Singles */}
       <Select 
-        value={filters.shipsSingles || 'all'} 
-        onValueChange={(v) => onChange({ ...filters, shipsSingles: v === 'all' ? undefined : v as ShipsSingles })}
+        value={filters.shipsSingles === undefined ? 'all' : filters.shipsSingles ? 'yes' : 'no'} 
+        onValueChange={(v) => onChange({ ...filters, shipsSingles: v === 'all' ? undefined : v === 'yes' })}
       >
         <SelectTrigger className="w-[140px] h-9">
           <SelectValue placeholder="MOQ" />
@@ -73,15 +73,14 @@ const FilterBar = ({ filters, onChange }: FilterBarProps) => {
         <SelectContent>
           <SelectItem value="all">Any MOQ</SelectItem>
           <SelectItem value="yes">Ships Singles</SelectItem>
-          <SelectItem value="mixed">Mixed MOQ</SelectItem>
           <SelectItem value="no">Bulk Only</SelectItem>
         </SelectContent>
       </Select>
 
-      {/* Min Score */}
+      {/* Min Leverage Score */}
       <Select 
-        value={filters.minScore?.toString() || 'all'} 
-        onValueChange={(v) => onChange({ ...filters, minScore: v === 'all' ? undefined : Number(v) })}
+        value={filters.minLeverageScore?.toString() || 'all'} 
+        onValueChange={(v) => onChange({ ...filters, minLeverageScore: v === 'all' ? undefined : Number(v) })}
       >
         <SelectTrigger className="w-[120px] h-9">
           <SelectValue placeholder="Min Score" />
@@ -95,7 +94,7 @@ const FilterBar = ({ filters, onChange }: FilterBarProps) => {
       </Select>
 
       {/* Clear Filters */}
-      {(filters.supplier || filters.region || filters.shipsSingles || filters.minScore) && (
+      {(filters.supplier || filters.region || filters.shipsSingles !== undefined || filters.minLeverageScore) && (
         <button
           onClick={() => onChange({})}
           className="px-3 py-1.5 text-sm text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
